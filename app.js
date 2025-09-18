@@ -27,7 +27,7 @@ app.get("/", (req,res)=>{
 });
 app.get("/login-demo",(req,res)=>{
 
-    res.render("loginPage.ejs",{stats: "hide"});
+    res.render("loginPage.ejs",{stat: req.query.stats});
 });
 app.get("/api-demo",(req,res)=>{
 
@@ -53,7 +53,7 @@ app.post("/CheckPwd",(req,res)=>{
         try{
 
             db.query("insert into credentials values($1, $2)",[req.body.UName,req.body.Pwd]);
-            res.redirect("/login-demo");
+            res.redirect("/login-demo?stats=hide");
 
         }catch (err){
 
@@ -68,41 +68,27 @@ app.post("/CheckPwd",(req,res)=>{
 
 });
 
-app.post("/submit", (req,res)=>{
+app.post("/submit", async (req,res)=>{
 
-    db.query("select * from credentials where username = $1",[req.body.UName],(err,result) => {
+    try{
+        const result = await db.query("select * from credentials where username=$1",[req.body.UName]);
 
-        if(err){
+        console.log(result.rows);
+        if(result.rows[0].pwd === req.body.pwd){
 
-            res.render("loginPage.ejs",{stats:"show"});
+            res.redirect("/dashboard");
 
         }
         else{
 
-               console.log(result.rows);
-
-               if(result.rows.length ===0){
-
-                   res.render("loginPage.ejs",{stats:"show"});
-
-               }
-               else{
-                   if(result.rows[0].pwd === req.body.pwd){
-
-                       res.redirect("/dashboard");
-
-                   }
-                   else{
-                       res.render("loginPage.ejs",{stats:"show"});
-                   }
-               }
-
-
+            //res.render("loginPage.ejs",{stats:"show"});
+            res.redirect("/login-demo?stats=show")
 
         }
 
-
-    });
+    }catch (err){
+        res.redirect("/login-demo?stats=show")
+    }
 
 });
 
