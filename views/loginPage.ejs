@@ -1,0 +1,49 @@
+<!doctype html>
+<html class="no-js" lang="">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Trial</title>
+    <link rel="stylesheet" href="/css/loginWindow.css">
+    <meta name="description" content="">
+
+    <meta property="og:title" content="">
+    <meta property="og:type" content="">
+    <meta property="og:url" content="">
+    <meta property="og:image" content="">
+    <meta property="og:image:alt" content="">
+
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <link rel="manifest" href="site.webmanifest">
+    <meta name="theme-color" content="#fafafa">
+</head>
+
+<body>
+
+<!-- Add your site or application content here -->
+<div class = "MainBox">
+    <div class = "card">
+        <div>
+            <form action="/submit" method="post">
+                <div class ="details">
+                    <%if(stats === "show"){%>
+                    <div class ="msg">Invalid Username or Password</div>
+                    <%}%>
+                    <div class = "txt"><input type="text" placeholder="UserName" name="UName" required></div>
+                    <div class = "txt"><input type="text" placeholder="Password" name="pwd" required></div>
+                    <div class = "submit"><button type="submit">Login</button></div>
+                    <div class = "SignIn">Don't have an account?<a href="/register">Register</a></div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+</body>
+
+</html>
