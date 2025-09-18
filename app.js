@@ -36,7 +36,7 @@ app.get("/api-demo",(req,res)=>{
 
 app.get("/register", (req,res)=>{
 
-    res.render("SignIn.ejs");
+    res.render("SignIn.ejs",{message:req.query.msg});
 });
 
 app.get("/dashboard",(req,res)=>{
@@ -45,27 +45,32 @@ app.get("/dashboard",(req,res)=>{
 });
 
 //include the .post link below
-app.post("/CheckPwd",(req,res)=>{
+app.post("/CheckPwd",async (req,res)=> {
 
 
-    if(req.body.rPwd === req.body.Pwd)
-    {
-        try{
+    try {
 
-            db.query("insert into credentials values($1, $2)",[req.body.UName,req.body.Pwd]);
-            res.redirect("/login-demo?stats=hide");
+        if (req.body.rPwd !== req.body.Pwd) {
 
-        }catch (err){
-
-            res
+            throw "Error";
 
         }
 
-    }
-    else{
-        res.redirect("/SignIn.ejs");
-    }
+        await db.query("insert into credentials values($1, $2)", [req.body.UName, req.body.Pwd]);
 
+        res.redirect("/login-demo?stats=hide");
+
+
+    } catch (err) {
+
+        if (err === "Error") {
+            res.redirect("/register?msg=Password not matching");
+        } else {
+            res.redirect("/register?msg=Username Taken Already");
+        }
+
+
+    }
 });
 
 app.post("/submit", async (req,res)=>{
