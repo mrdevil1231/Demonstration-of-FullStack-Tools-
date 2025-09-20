@@ -1,5 +1,6 @@
 import express from "express"
 import BodyParser from "body-parser"
+import bcrypt from "bcrypt"
 import pg from "pg"
 
 const app = express();
@@ -43,6 +44,7 @@ app.get("/dashboard",(req,res)=>{
 
     res.send("Welcome to dashboard dear user");
 });
+
 
 //include the .post link below
 app.post("/CheckPwd",async (req,res)=> {
@@ -93,6 +95,7 @@ app.post("/submit", async (req,res)=>{
 
     }catch (err){
         res.redirect("/login-demo?stats=show")
+
     }
 
 });
