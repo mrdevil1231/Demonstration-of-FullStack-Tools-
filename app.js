@@ -5,9 +5,12 @@ import pg from "pg"
 
 const app = express();
 const port = 4000;
+const saltRounds = 10;
+
 
 app.use(express.static("public"));
 app.use(BodyParser.urlencoded({ extended:true }));
+
 
 //Define and connect to Database
 const db = new pg.Client({
@@ -47,32 +50,27 @@ app.get("/dashboard",(req,res)=>{
 
 
 //include the .post link below
-app.post("/CheckPwd",async (req,res)=> {
+app.post("/CheckPwd",(req,res)=> {
 
 
-    try {
+    bcrypt.hash(req.body.Pwd, saltRounds, async (err, hash) => {
 
-        if (req.body.rPwd !== req.body.Pwd) {
+        try {
+            if (err) {
+                console.log("Error Occured while Hashing During Registration");
+            }
+            else{
+                await db.query("insert into credentials values($1, $2)", [req.body.UName, hash]);
 
-            throw "Error";
+                res.redirect("/login-demo?stats=hide");
+            }
 
-        }
+        } catch (err) {
 
-        await db.query("insert into credentials values($1, $2)", [req.body.UName, req.body.Pwd]);
-
-        res.redirect("/login-demo?stats=hide");
-
-
-    } catch (err) {
-
-        if (err === "Error") {
-            res.redirect("/register?msg=Password not matching");
-        } else {
             res.redirect("/register?msg=Username Taken Already");
+
         }
-
-
-    }
+    });
 });
 
 app.post("/submit", async (req,res)=>{
@@ -81,17 +79,19 @@ app.post("/submit", async (req,res)=>{
         const result = await db.query("select * from credentials where username=$1",[req.body.UName]);
 
         console.log(result.rows);
-        if(result.rows[0].pwd === req.body.pwd){
 
-            res.redirect("/dashboard");
+        bcrypt.compare(req.body.pwd,result.rows[0].pwd,(err,result)=>{
+           if(err){
+               console.log("Error during comparing password in login");
+           }
+           else if(result){
+               res.redirect("/dashboard");
+           }
+           else{
+               res.redirect("/login-demo?stats=show")
+           }
 
-        }
-        else{
-
-            //res.render("loginPage.ejs",{stats:"show"});
-            res.redirect("/login-demo?stats=show")
-
-        }
+        });
 
     }catch (err){
         res.redirect("/login-demo?stats=show")
@@ -99,8 +99,6 @@ app.post("/submit", async (req,res)=>{
     }
 
 });
-
-
 
 //port
 app.listen(port);
