@@ -2,23 +2,44 @@ import express from "express"
 import BodyParser from "body-parser"
 import bcrypt from "bcrypt"
 import pg from "pg"
+import sessions from "express-session"
+import passport from "passport"
+import { Strategy } from "passport-local"
+import env from "dotenv"
+
 
 const app = express();
 const port = 4000;
 const saltRounds = 10;
-
+env.config();
 
 app.use(express.static("public"));
 app.use(BodyParser.urlencoded({ extended:true }));
 
+app.use(sessions({
+
+    secret: process.env.session_secret,
+    resave: false,
+    saveUninitialized: true,
+
+    cookie: {
+        maxAge: 1000 * 60
+    }
+
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+
 
 //Define and connect to Database
 const db = new pg.Client({
-    user:"postgres",
-    host:"localhost",
-    database:"DB_DemonStration",
-    password:"Shubham@16",
-    port:"5432"
+    user:process.env.DB_user,
+    host:process.env.DB_localhost,
+    database:process.env.DB_database,
+    password:process.env.DB_password,
+    port:process.env.DB_port
 });
 
 db.connect();
@@ -45,7 +66,14 @@ app.get("/register", (req,res)=>{
 
 app.get("/dashboard",(req,res)=>{
 
-    res.send("Welcome to dashboard dear user");
+    if(req.isAuthenticated()) {
+        res.send("Welcome to dashboard dear user");
+    }
+    else{
+
+        res.redirect("/login-demo?stats=hide")
+    }
+
 });
 
 
@@ -60,9 +88,12 @@ app.post("/CheckPwd",(req,res)=> {
                 console.log("Error Occured while Hashing During Registration");
             }
             else{
-                await db.query("insert into credentials values($1, $2)", [req.body.UName, hash]);
+                const rt = await db.query("insert into credentials values($1, $2) returning *", [req.body.UName, hash]);
 
-                res.redirect("/login-demo?stats=hide");
+                req.login(rt.rows[0],(err)=>{
+                    res.redirect("/dashboard");
+                });
+
             }
 
         } catch (err) {
@@ -73,32 +104,45 @@ app.post("/CheckPwd",(req,res)=> {
     });
 });
 
-app.post("/submit", async (req,res)=>{
+app.post("/submit", passport.authenticate("local",{
+    successRedirect: "/dashboard",
+    failureRedirect: "/login-demo?stats=show",
+}));
+
+//Registering Passport Strategy
+passport.use( new Strategy({
+    usernameField: "UName",
+    passwordField: "pwd",
+},async function verify(UName,pwd,cb) {
 
     try{
-        const result = await db.query("select * from credentials where username=$1",[req.body.UName]);
+        const cred = await db.query("select * from credentials where username=$1",[UName]);
 
-        console.log(result.rows);
+        console.log(cred.rows);
 
-        bcrypt.compare(req.body.pwd,result.rows[0].pwd,(err,result)=>{
-           if(err){
-               console.log("Error during comparing password in login");
-           }
-           else if(result){
-               res.redirect("/dashboard");
-           }
-           else{
-               res.redirect("/login-demo?stats=show")
-           }
+        bcrypt.compare(pwd,cred.rows[0].pwd,(err,result)=>{
+            if(err){
+                console.log("Error during comparing password in login");
+            }
+            else if(result){
+                return cb(null,cred.rows[0]);
+            }
+            else{
+                return cb(null,false);
+            }
 
         });
 
     }catch (err){
-        res.redirect("/login-demo?stats=show")
-
+        return cb(null,false);
     }
 
-});
+}));
+
+
+passport.serializeUser((user,cb) =>{ cb(null,user) } );
+
+passport.deserializeUser((user,cb)=>{ cb(null,user) } );
 
 //port
 app.listen(port);
