@@ -5,6 +5,7 @@ import pg from "pg"
 import sessions from "express-session"
 import passport from "passport"
 import { Strategy } from "passport-local"
+import GoogleStrategy from "passport-google-oauth20"
 import env from "dotenv"
 
 
@@ -76,7 +77,14 @@ app.get("/dashboard",(req,res)=>{
 
 });
 
+app.get("/auth/google", passport.authenticate("google",{
+    scope:["profile","email"]
+}))
 
+app.get("/auth/google/check",passport.authenticate("google",{
+    successRedirect: "/dashboard",
+    failureRedirect: "/login-demo?stats=hide",
+}))
 //include the .post link below
 app.post("/CheckPwd",(req,res)=> {
 
@@ -110,7 +118,7 @@ app.post("/submit", passport.authenticate("local",{
 }));
 
 //Registering Passport Strategy
-passport.use( new Strategy({
+passport.use("local" ,new Strategy({
     usernameField: "UName",
     passwordField: "pwd",
 },async function verify(UName,pwd,cb) {
@@ -139,6 +147,35 @@ passport.use( new Strategy({
 
 }));
 
+passport.use("google", new GoogleStrategy({
+
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "http://localhost:4000/auth/google/check",
+    userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
+
+    }, async (accessToken, refreshToken, profile, cb) => {
+
+       console.log(profile._json.email);
+       try{
+           const result = await db.query("select * from credentials where username = $1",[profile._json.email]);
+
+           if(result.rows.length === 0){
+
+               const GUser = await db.query("insert into credentials values ($1,$2) returning *",[profile._json.email,"google"])
+
+               return cb(null,GUser.rows[0]);
+           }
+           return cb(null,result.rows[0]);
+
+       }catch{
+           return cb(null,false);
+       }
+
+
+
+    })
+);
 
 passport.serializeUser((user,cb) =>{ cb(null,user) } );
 
